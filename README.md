@@ -56,7 +56,7 @@ The optimized XGBoost model achieved outstanding generalization on the unseen te
 **1. Clone the repository:**
 
 ```bash
-git clone [https://github.com/aryonmt/dropout_prediction.git](https://github.com/aryonmt/dropout_prediction.git)
+git clone https://github.com/aryonmt/dropout_prediction.git
 cd dropout_prediction
 ```
 
@@ -76,9 +76,9 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-**3. Install dependencies:**
+**4. Execute the ML Pipeline:**
 
-Ensure the raw dataset is located at data/data.csv, then run:
+Ensure the raw dataset is located at `data/data.csv`, then run:
 
 ```bash
 python main.py
@@ -88,22 +88,24 @@ Outputs, including the ROC curve and SHAP summary plots, will be automatically s
 
 ## 📁 Repository Structure
 
+```text
 dropout_prediction/
 ├── data/
-│ └── data.csv
+│   └── data.csv
 ├── notebooks/
-│ └── 01_EDA.ipynb # Deep dive into Data Quality & Multicollinearity
+│   └── 01_EDA.ipynb              # Deep dive into Data Quality & Multicollinearity
 ├── reports/
-│ ├── confusion_matrix.png
-│ ├── roc_curve.png
-│ └── shap_summary.png
+│   ├── confusion_matrix.png
+│   ├── roc_curve.png
+│   └── shap_summary.png
 ├── src/
-│ ├── **init**.py
-│ ├── config.py # Centralized constants & paths
-│ ├── data_loader.py
-│ ├── features.py
-│ ├── train.py
-│ └── evaluate.py
-├── main.py # Pipeline execution entry point
+│   ├── __init__.py
+│   ├── config.py                 # Centralized constants & paths
+│   ├── data_loader.py
+│   ├── features.py
+│   ├── train.py
+│   └── evaluate.py
+├── main.py                       # Pipeline execution entry point
 ├── requirements.txt
 └── README.md
+```
