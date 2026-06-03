@@ -43,6 +43,9 @@ def main() -> None:
     evaluate.explain_model_with_shap(best_model, X_train_selected, X_test_selected)
     evaluate.plot_roc_curve(best_model, X_test_selected, y_test)
 
+    # اضافه شدن رسم نمودار یادگیری برای تشخیص اورفیتینگ
+    evaluate.plot_learning_curve(best_model, X_train_selected, y_train)
+
     print("\n✅ Pipeline completed successfully. Check the 'reports' folder for plots.")
 
 

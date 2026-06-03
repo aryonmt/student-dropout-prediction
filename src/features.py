@@ -37,7 +37,7 @@ def calculate_mutual_information(
 
 
 def get_l1_selected_features(
-    X_train: pd.DataFrame, y_train: pd.Series, c_param: float = 0.1
+    X_train: pd.DataFrame, y_train: pd.Series, c_param: float = 0.01
 ) -> list[str]:
     """
     Selects features using L1 regularization (Lasso) via Logistic Regression.
@@ -69,7 +69,7 @@ def get_l1_selected_features(
 
 
 def combine_feature_strategies(
-    mi_df: pd.DataFrame, l1_features: list[str], top_k_mi: int = 20
+    mi_df: pd.DataFrame, l1_features: list[str], top_k_mi: int = 12
 ) -> list[str]:
     """
     Creates a final robust feature set by combining top MI features and L1 features.

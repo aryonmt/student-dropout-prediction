@@ -14,4 +14,4 @@ TARGET_POSITIVE_CLASS = "Dropout"
 
 # Machine Learning Parameters
 RANDOM_STATE = 42
-TEST_SIZE = 0.30
+TEST_SIZE = 0.20

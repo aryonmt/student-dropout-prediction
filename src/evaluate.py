@@ -5,6 +5,7 @@ Model evaluation and Explainable AI (SHAP) module.
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import shap
@@ -19,6 +20,7 @@ from sklearn.metrics import (
     roc_auc_score,
     roc_curve,
 )
+from sklearn.model_selection import learning_curve
 from xgboost import XGBClassifier
 
 
@@ -174,3 +176,83 @@ def plot_roc_curve(
     plt.close()
 
     print(f"ROC Curve saved to: {save_path}")
+
+
+def plot_learning_curve(
+    model: XGBClassifier,
+    X_train: pd.DataFrame,
+    y_train: pd.Series,
+    save_path: str | Path = "reports/learning_curve.png",
+) -> None:
+    """
+    Generates and saves the learning curve to diagnose overfitting or underfitting.
+
+    Args:
+        model: Trained XGBoost model.
+        X_train: Training features DataFrame.
+        y_train: Training target Series.
+        save_path: Path to save the generated plot.
+    """
+    print("\nGenerating Learning Curve (this might take a moment)...")
+
+    train_sizes, train_scores, test_scores = learning_curve(
+        estimator=model,
+        X=X_train,
+        y=y_train,
+        train_sizes=np.linspace(0.1, 1.0, 5),
+        cv=5,
+        scoring="roc_auc",
+        n_jobs=-1,
+    )
+
+    train_mean = np.mean(train_scores, axis=1)
+    train_std = np.std(train_scores, axis=1)
+    test_mean = np.mean(test_scores, axis=1)
+    test_std = np.std(test_scores, axis=1)
+
+    plt.figure(figsize=(8, 6))
+
+    plt.plot(
+        train_sizes,
+        train_mean,
+        color="blue",
+        marker="o",
+        markersize=5,
+        label="Training Score (ROC-AUC)",
+    )
+    plt.fill_between(
+        train_sizes,
+        train_mean + train_std,
+        train_mean - train_std,
+        alpha=0.15,
+        color="blue",
+    )
+
+    plt.plot(
+        train_sizes,
+        test_mean,
+        color="green",
+        linestyle="--",
+        marker="s",
+        markersize=5,
+        label="Cross-Validation Score (ROC-AUC)",
+    )
+    plt.fill_between(
+        train_sizes,
+        test_mean + test_std,
+        test_mean - test_std,
+        alpha=0.15,
+        color="green",
+    )
+
+    plt.title("Learning Curve", fontweight="bold")
+    plt.xlabel("Number of Training Samples", fontweight="bold")
+    plt.ylabel("ROC-AUC Score", fontweight="bold")
+    plt.legend(loc="lower right")
+    plt.grid(alpha=0.3)
+
+    Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    plt.close()
+
+    print(f"Learning Curve saved to: {save_path}")

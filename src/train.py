@@ -18,7 +18,7 @@ def objective(trial: optuna.Trial, X: pd.DataFrame, y: pd.Series) -> float:
     params = {
         "n_estimators": trial.suggest_int("n_estimators", 100, 800, step=100),
         "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.1, log=True),
-        "max_depth": trial.suggest_int("max_depth", 3, 10),
+        "max_depth": trial.suggest_int("max_depth", 3, 7),
         "min_child_weight": trial.suggest_int("min_child_weight", 1, 7),
         "subsample": trial.suggest_float("subsample", 0.6, 1.0),
         "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
