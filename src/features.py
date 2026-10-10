@@ -41,10 +41,13 @@ def get_l1_selected_features(
 ) -> list[str]:
     """
     Selects features using L1 regularization (Lasso) via Logistic Regression.
-    Features with non-zero coefficients are selected.
+
+    The logistic model is fit on the raw numeric training columns. The matrix
+    is not scaled. L1 penalties are scale-sensitive. Features with non-zero
+    coefficients are selected.
 
     Args:
-        X_train: Training features DataFrame (should be scaled).
+        X_train: Raw numeric training columns. This matrix is not scaled.
         y_train: Training target Series.
         c_param: Inverse of regularization strength (smaller values specify stronger regularization).
 
@@ -80,11 +83,7 @@ def combine_feature_strategies(
         top_k_mi: Number of top MI features to consider.
 
     Returns:
-        A deduplicated list of consensus features.
+        A sorted, deduplicated list of consensus features.
     """
     top_mi_features = mi_df.head(top_k_mi)["Feature"].tolist()
-
-    # Union of selected features
-    combined_features = list(set(top_mi_features + l1_features))
-
-    return combined_features
+    return sorted(set(top_mi_features + l1_features))

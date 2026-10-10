@@ -12,6 +12,7 @@ import shap
 from sklearn.metrics import (
     accuracy_score,
     auc,
+    balanced_accuracy_score,
     classification_report,
     confusion_matrix,
     f1_score,
@@ -20,8 +21,10 @@ from sklearn.metrics import (
     roc_auc_score,
     roc_curve,
 )
-from sklearn.model_selection import learning_curve
+from sklearn.model_selection import StratifiedKFold, learning_curve
 from xgboost import XGBClassifier
+
+from src import config
 
 
 def evaluate_performance(
@@ -30,22 +33,31 @@ def evaluate_performance(
     """
     Evaluates the trained model on the test set and calculates key metrics.
 
+    The positive class is 1 (Dropout).
+
     Args:
         model: Trained XGBoost model.
         X_test: Test features DataFrame.
         y_test: Test target Series.
 
     Returns:
-        A dictionary containing calculated evaluation metrics.
+        Accuracy, Balanced_Accuracy, Precision_Dropout, Recall_Dropout,
+        F1_Dropout, F1_Macro, and ROC_AUC.
     """
     y_pred = model.predict(X_test)
     y_proba = model.predict_proba(X_test)[:, 1]
 
     metrics = {
         "Accuracy": float(accuracy_score(y_test, y_pred)),
-        "Precision": float(precision_score(y_test, y_pred, zero_division=0)),
-        "Recall": float(recall_score(y_test, y_pred)),
-        "F1_Score": float(f1_score(y_test, y_pred)),
+        "Balanced_Accuracy": float(balanced_accuracy_score(y_test, y_pred)),
+        "Precision_Dropout": float(
+            precision_score(y_test, y_pred, pos_label=1, zero_division=0)
+        ),
+        "Recall_Dropout": float(
+            recall_score(y_test, y_pred, pos_label=1, zero_division=0)
+        ),
+        "F1_Dropout": float(f1_score(y_test, y_pred, pos_label=1, zero_division=0)),
+        "F1_Macro": float(f1_score(y_test, y_pred, average="macro", zero_division=0)),
         "ROC_AUC": float(roc_auc_score(y_test, y_proba)),
     }
 
@@ -53,10 +65,14 @@ def evaluate_performance(
     print("FINAL TEST SET PERFORMANCE")
     print("=" * 40)
     for metric_name, value in metrics.items():
-        print(f"{metric_name:10}: {value:.4f}")
+        print(f"{metric_name:20}: {value:.4f}")
 
     print("\nClassification Report:")
-    print(classification_report(y_test, y_pred, target_names=["Graduate", "Dropout"]))
+    print(
+        classification_report(
+            y_test, y_pred, target_names=config.CLASS_NAMES
+        )
+    )
 
     return metrics
 
@@ -65,7 +81,7 @@ def plot_confusion_matrix(
     model: XGBClassifier,
     X_test: pd.DataFrame,
     y_test: pd.Series,
-    save_path: str | Path = "reports/confusion_matrix.png",
+    save_path: str | Path = config.REPORTS_DIR / "confusion_matrix.png",
 ) -> None:
     """
     Generates and saves the confusion matrix plot.
@@ -75,6 +91,9 @@ def plot_confusion_matrix(
         X_test: Test features DataFrame.
         y_test: Test target Series.
         save_path: Path to save the generated plot.
+
+    Returns:
+        None
     """
     y_pred = model.predict(X_test)
     cm = confusion_matrix(y_test, y_pred)
@@ -86,8 +105,8 @@ def plot_confusion_matrix(
         fmt="d",
         cmap="Blues",
         square=True,
-        xticklabels=["Graduate", "Dropout"],
-        yticklabels=["Graduate", "Dropout"],
+        xticklabels=config.CLASS_NAMES,
+        yticklabels=config.CLASS_NAMES,
     )
     plt.title("Confusion Matrix", fontweight="bold")
     plt.ylabel("True Label")
@@ -102,18 +121,19 @@ def plot_confusion_matrix(
 
 def explain_model_with_shap(
     model: XGBClassifier,
-    X_train: pd.DataFrame,
     X_test: pd.DataFrame,
-    save_path: str | Path = "reports/shap_summary.png",
+    save_path: str | Path = config.REPORTS_DIR / "shap_summary.png",
 ) -> None:
     """
     Uses SHAP (SHapley Additive exPlanations) to explain feature impacts.
 
     Args:
         model: Trained XGBoost model.
-        X_train: Training features DataFrame (used for background distribution).
         X_test: Test features DataFrame.
         save_path: Path to save the SHAP summary plot.
+
+    Returns:
+        None
     """
     print("\nGenerating SHAP explanations (this might take a moment)...")
 
@@ -139,7 +159,7 @@ def plot_roc_curve(
     model: XGBClassifier,
     X_test: pd.DataFrame,
     y_test: pd.Series,
-    save_path: str | Path = "reports/roc_curve.png",
+    save_path: str | Path = config.REPORTS_DIR / "roc_curve.png",
 ) -> None:
     """
     Generates and saves the Receiver Operating Characteristic (ROC) curve.
@@ -149,10 +169,13 @@ def plot_roc_curve(
         X_test: Test features DataFrame.
         y_test: Test target Series.
         save_path: Path to save the generated plot.
+
+    Returns:
+        None
     """
     y_proba = model.predict_proba(X_test)[:, 1]
 
-    fpr, tpr, thresholds = roc_curve(y_test, y_proba)
+    fpr, tpr, _ = roc_curve(y_test, y_proba)
     roc_auc = auc(fpr, tpr)
 
     plt.figure(figsize=(8, 6))
@@ -182,7 +205,7 @@ def plot_learning_curve(
     model: XGBClassifier,
     X_train: pd.DataFrame,
     y_train: pd.Series,
-    save_path: str | Path = "reports/learning_curve.png",
+    save_path: str | Path = config.REPORTS_DIR / "learning_curve.png",
 ) -> None:
     """
     Generates and saves the learning curve to diagnose overfitting or underfitting.
@@ -192,15 +215,23 @@ def plot_learning_curve(
         X_train: Training features DataFrame.
         y_train: Training target Series.
         save_path: Path to save the generated plot.
+
+    Returns:
+        None
     """
     print("\nGenerating Learning Curve (this might take a moment)...")
 
+    cv = StratifiedKFold(
+        n_splits=config.N_CV_SPLITS,
+        shuffle=True,
+        random_state=config.RANDOM_STATE,
+    )
     train_sizes, train_scores, test_scores = learning_curve(
         estimator=model,
         X=X_train,
         y=y_train,
         train_sizes=np.linspace(0.1, 1.0, 5),
-        cv=5,
+        cv=cv,
         scoring="roc_auc",
         n_jobs=-1,
     )

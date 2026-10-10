@@ -2,7 +2,7 @@
 Main execution pipeline for the Dropout Prediction project.
 """
 
-from src import config, data_loader, evaluate, features, train
+from src import config, data_loader, evaluate, features, predict, train
 
 
 def main() -> None:
@@ -34,16 +34,20 @@ def main() -> None:
 
     # 4. Train and Tune Model (Optuna)
     print("\n[4/5] Tuning hyperparameters and training XGBoost model...")
-    best_model = train.tune_and_train_xgboost(X_train_selected, y_train, n_trials=20)
+    best_model = train.tune_and_train_xgboost(
+        X_train_selected, y_train, n_trials=config.DEFAULT_N_TRIALS
+    )
+    predict.save_training_artifact(best_model, final_features)
+    print(f"Saved model to {config.MODEL_PATH}")
 
     # 5. Evaluate and Explain
     print("\n[5/5] Evaluating performance and generating explanations...")
     evaluate.evaluate_performance(best_model, X_test_selected, y_test)
     evaluate.plot_confusion_matrix(best_model, X_test_selected, y_test)
-    evaluate.explain_model_with_shap(best_model, X_train_selected, X_test_selected)
+    evaluate.explain_model_with_shap(best_model, X_test_selected)
     evaluate.plot_roc_curve(best_model, X_test_selected, y_test)
 
-    # اضافه شدن رسم نمودار یادگیری برای تشخیص اورفیتینگ
+    # Learning curve diagnoses overfit or underfit.
     evaluate.plot_learning_curve(best_model, X_train_selected, y_train)
 
     print("\n✅ Pipeline completed successfully. Check the 'reports' folder for plots.")

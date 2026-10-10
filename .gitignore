@@ -9,10 +9,26 @@ venv/
 env/
 
 # Data
-data/data.csv
+data/*.csv
+
+# Model artifacts
+*.joblib
+*.pkl
+*.pickle
+models/
 
 # Jupyter
 .ipynb_checkpoints/
 
-# VS Code settings
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
 .vscode/
+
+# Test/type caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/

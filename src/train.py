@@ -4,16 +4,25 @@ Model training and hyperparameter tuning module using Optuna.
 
 import optuna
 import pandas as pd
+from optuna.samplers import TPESampler
 from sklearn.model_selection import StratifiedKFold, cross_val_score
+from xgboost import XGBClassifier
 
 from src import config
-from xgboost import XGBClassifier
 
 
 def objective(trial: optuna.Trial, X: pd.DataFrame, y: pd.Series) -> float:
     """
     Optuna objective function for tuning XGBoost hyperparameters.
     Optimizes for ROC-AUC using Stratified K-Fold Cross Validation.
+
+    Args:
+        trial: Optuna trial that proposes one hyperparameter combination.
+        X: Training features DataFrame.
+        y: Training target Series.
+
+    Returns:
+        Mean ROC-AUC across the stratified cross-validation folds.
     """
     params = {
         "n_estimators": trial.suggest_int("n_estimators", 100, 800, step=100),
@@ -32,7 +41,11 @@ def objective(trial: optuna.Trial, X: pd.DataFrame, y: pd.Series) -> float:
     model = XGBClassifier(**params)
 
     # Robust evaluation using Stratified K-Fold
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=config.RANDOM_STATE)
+    cv = StratifiedKFold(
+        n_splits=config.N_CV_SPLITS,
+        shuffle=True,
+        random_state=config.RANDOM_STATE,
+    )
 
     # n_jobs=-1 ensures we use all CPU cores
     scores = cross_val_score(model, X, y, cv=cv, scoring="roc_auc", n_jobs=-1)
@@ -41,7 +54,9 @@ def objective(trial: optuna.Trial, X: pd.DataFrame, y: pd.Series) -> float:
 
 
 def tune_and_train_xgboost(
-    X_train: pd.DataFrame, y_train: pd.Series, n_trials: int = 30
+    X_train: pd.DataFrame,
+    y_train: pd.Series,
+    n_trials: int = config.DEFAULT_N_TRIALS,
 ) -> XGBClassifier:
     """
     Runs Optuna study to find best hyperparameters and trains the final model.
@@ -57,7 +72,10 @@ def tune_and_train_xgboost(
     # Suppress verbose Optuna logs to keep the terminal clean
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-    study = optuna.create_study(direction="maximize")
+    study = optuna.create_study(
+        direction="maximize",
+        sampler=TPESampler(seed=config.RANDOM_STATE),
+    )
     study.optimize(lambda trial: objective(trial, X_train, y_train), n_trials=n_trials)
 
     print(f"Best CV ROC-AUC Score: {study.best_trial.value:.4f}")
@@ -67,6 +85,7 @@ def tune_and_train_xgboost(
     best_params["scale_pos_weight"] = float((y_train == 0).sum() / (y_train == 1).sum())
     best_params["random_state"] = config.RANDOM_STATE
     best_params["eval_metric"] = "auc"
+    best_params["verbosity"] = 0
 
     final_model = XGBClassifier(**best_params)
     final_model.fit(X_train, y_train)
